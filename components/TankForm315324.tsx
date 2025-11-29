@@ -3,6 +3,11 @@ import { parseInput, formatNumber } from '../utils';
 import { InputField, ChipGroup, ResultBox } from './UIComponents';
 import { Calculator } from 'lucide-react';
 
+// Transfer proportion: when 315 loses 1mm, 324 gains 1.2814mm
+// Based on real data: 315 (427→260, -167mm) → 324 (360→574, +214mm)
+// Coefficient: 214/167 ≈ 1.2814
+const TRANSFER_PROPORTION_315_TO_324 = 1.2814;
+
 const TankForm315324: React.FC = () => {
   const [level315, setLevel315] = useState('');
   const [level324, setLevel324] = useState('');
@@ -49,9 +54,11 @@ const TankForm315324: React.FC = () => {
 
     const mmToTransfer = Math.max(l315 - actualTarget, 0);
     
-    // Update logic to include current level of 324 in the total available solution
-    const totalMm = l324 + mmToTransfer;
-    const hours = totalMm / rate;
+    // Calculate final level in 324 considering transfer proportion
+    // When 315 loses X mm, 324 gains X * TRANSFER_PROPORTION_315_TO_324 mm
+    const mmGainedIn324 = mmToTransfer * TRANSFER_PROPORTION_315_TO_324;
+    const finalLevel324 = l324 + mmGainedIn324;
+    const hours = finalLevel324 / rate;
 
     let batchLine = '';
     let currentBatchMm = batchMm315;
@@ -62,13 +69,16 @@ const TankForm315324: React.FC = () => {
    }
 
     if (currentBatchMm !== null && currentBatchMm > 0) {
-      const batchHours = currentBatchMm / rate;
-      batchLine = `\nЕсли потом приготовим новый раствор объёмом ${formatNumber(currentBatchMm)} мм (по 315), то при расходе ${formatNumber(rate, 1)} мм/ч его хватит на ${formatNumber(batchHours, 2)} ч`;
+      const batchMmIn324 = currentBatchMm * TRANSFER_PROPORTION_315_TO_324;
+      const batchHours = batchMmIn324 / rate;
+      batchLine = `\nЕсли потом приготовим новый раствор ${formatNumber(currentBatchMm)} мм (по 315) = ${formatNumber(batchMmIn324, 1)} мм (по 324), то при расходе ${formatNumber(rate, 1)} мм/ч его хватит на ${formatNumber(batchHours, 2)} ч`;
     }
 
     setResult([
       `Перекачиваем 315 до: ${formatNumber(actualTarget)} мм`,
-      `Перекачиваем ${formatNumber(mmToTransfer, 1)} мм до ${formatNumber(actualTarget)} мм`,
+      `Из 315 убывает: ${formatNumber(mmToTransfer, 1)} мм`,
+      `В 324 прибывает: ${formatNumber(mmGainedIn324, 1)} мм (коэфф. ×${TRANSFER_PROPORTION_315_TO_324})`,
+      `Итоговый уровень в 324: ${formatNumber(finalLevel324, 1)} мм`,
       `На сколько раствора хватит при расходе ${formatNumber(rate, 1)} мм/ч: ${formatNumber(hours, 2)} ч`,
       batchLine
     ].filter(Boolean).join('\n'));
