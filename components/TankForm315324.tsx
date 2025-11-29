@@ -24,6 +24,9 @@ const TankForm315324: React.FC = () => {
   const [useCustomBatch315, setUseCustomBatch315] = useState(false);
   const [customBatch315Str, setCustomBatch315Str] = useState('');
 
+  // Constants
+  const minLevel324 = 350.0; // Dead volume in mm
+
   const calculate = () => {
     const l315 = parseInput(level315);
     const l324 = parseInput(level324);
@@ -36,6 +39,11 @@ const TankForm315324: React.FC = () => {
     if (rate <= 0) {
       setResult('Скорость должна быть > 0.');
       return;
+    }
+
+    let warning = '';
+    if (l324 < minLevel324) {
+      warning = `⚠️ Внимание: Уровень в 324 (${l324} мм) ниже неснижаемого остатка (${minLevel324} мм).\n`;
     }
 
     // Determine actual target
@@ -58,7 +66,10 @@ const TankForm315324: React.FC = () => {
     // When 315 loses X mm, 324 gains X * TRANSFER_PROPORTION_315_TO_324 mm
     const mmGainedIn324 = mmToTransfer * TRANSFER_PROPORTION_315_TO_324;
     const finalLevel324 = l324 + mmGainedIn324;
-    const hours = finalLevel324 / rate;
+    
+    // Dead Volume Logic: 350mm is unusable
+    const usefulMm = Math.max(finalLevel324 - minLevel324, 0);
+    const hours = usefulMm / rate;
 
     let batchLine = '';
     let currentBatchMm = batchMm315;
@@ -75,11 +86,13 @@ const TankForm315324: React.FC = () => {
     }
 
     setResult([
+      warning,
       `Перекачиваем 315 до: ${formatNumber(actualTarget)} мм`,
       `Из 315 убывает: ${formatNumber(mmToTransfer, 1)} мм`,
       `В 324 прибывает: ${formatNumber(mmGainedIn324, 1)} мм (коэфф. ×${TRANSFER_PROPORTION_315_TO_324})`,
       `Итоговый уровень в 324: ${formatNumber(finalLevel324, 1)} мм`,
-      `На сколько раствора хватит при расходе ${formatNumber(rate, 1)} мм/ч: ${formatNumber(hours, 2)} ч`,
+      `Полезный объем (сверх ${minLevel324} мм): ${formatNumber(usefulMm, 1)} мм`,
+      `На сколько хватит полезного объема: ${formatNumber(hours, 2)} ч`,
       batchLine
     ].filter(Boolean).join('\n'));
   };
