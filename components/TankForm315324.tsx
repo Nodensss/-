@@ -104,16 +104,16 @@ const TankForm315324: React.FC = () => {
     <div className="bg-orange-50 p-4 rounded-lg min-h-[calc(100vh-120px)]">
       <div className="max-w-lg mx-auto bg-white/50 p-6 rounded-xl backdrop-blur-sm shadow-sm">
         <InputField 
-          label="Уровень в 315 (мм)" 
-          value={level315} 
-          onChange={(e) => setLevel315(e.target.value)} 
-          placeholder="Например: 600"
-        />
-        <InputField 
           label="Уровень в 324 (мм)" 
           value={level324} 
           onChange={(e) => setLevel324(e.target.value)} 
           placeholder="Например: 200"
+        />
+        <InputField 
+          label="Уровень в 315 (мм)" 
+          value={level315} 
+          onChange={(e) => setLevel315(e.target.value)} 
+          placeholder="Например: 600"
         />
         <InputField 
           label="Скорость расхода (мм/ч)" 
