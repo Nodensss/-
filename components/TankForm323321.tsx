@@ -22,8 +22,10 @@ const TankForm323321: React.FC = () => {
   // Constants
   const minLevel323 = 30.0;
   const maxLevel321 = 634.0;
-  const proportionIncrease323 = 35.0;
-  const proportionVolume321 = 340.0;
+  // Transfer proportion based on real data: 382mm from 321 → 38% increase in 323
+  // Coefficient: 382 / 38 = 10.05 mm/%
+  const proportionIncrease323 = 38.0;
+  const proportionVolume321 = 382.0;
   const mmPerPercent = proportionVolume321 / proportionIncrease323;
 
   const calculate = () => {
@@ -87,7 +89,9 @@ const TankForm323321: React.FC = () => {
 
     setResult([
       `Перекачиваем 321 до: ${formatNumber(actualTarget)} мм`,
-      `Перекачиваем ${formatNumber(pumpMm)} мм до ${formatNumber(actualTarget)} мм`,
+      `Из 321 убывает: ${formatNumber(pumpMm)} мм`,
+      `В 323 прибывает: ${formatNumber(addedPercentTo323, 1)}% (коэфф. ${formatNumber(mmPerPercent, 2)} мм/%)`,
+      `Итоговый уровень в 323: ${formatNumber(totalPercentIn323, 1)}%`,
       `На сколько раствора хватит при расходе ${formatNumber(rate, 1)} %/ч: ${formatNumber(hours, 2)} ч`,
       batchLine
     ].filter(Boolean).join('\n'));
@@ -152,7 +156,7 @@ const TankForm323321: React.FC = () => {
         <ChipGroup
           label="Новый раствор (опционально): эквивалент в мм по 321"
           options={[
-            { label: '340', value: 340 },
+            { label: '382', value: 382 },
             { label: '600', value: 600 },
             { label: '900', value: 900 },
             { label: 'Нет', value: null },
