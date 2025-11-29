@@ -20,7 +20,7 @@ const TankForm323321: React.FC = () => {
   const [customBatch321Str, setCustomBatch321Str] = useState('');
 
   // Constants
-  const minLevel323 = 30.0;
+  const minLevel323 = 30.0; // Dead volume in %
   const maxLevel321 = 634.0;
   // Transfer proportion based on real data: 382mm from 321 → 38% increase in 323
   // Coefficient: 382 / 38 = 10.05 mm/%
@@ -43,9 +43,9 @@ const TankForm323321: React.FC = () => {
       return;
     }
 
+    let warning = '';
     if (l323 < minLevel323) {
-      setResult(`В 323 сейчас ${l323}%, это ниже минимума ${minLevel323}%. Перекачка запрещена.`);
-      return;
+      warning = `⚠️ Внимание: Уровень в 323 (${l323}%) ниже неснижаемого остатка (${minLevel323}%).\n`;
     }
 
     // Determine actual target
@@ -69,9 +69,11 @@ const TankForm323321: React.FC = () => {
     const addedPercentTo323 = pumpMm / mmPerPercent;
     
     // Calculate total time based on current level + added amount
-    // This fixes the issue where different 323 levels gave the same result.
     const totalPercentIn323 = l323 + addedPercentTo323;
-    const hours = totalPercentIn323 / rate;
+    
+    // Dead Volume Logic: 30% is unusable
+    const usefulPercent = Math.max(totalPercentIn323 - minLevel323, 0);
+    const hours = usefulPercent / rate;
 
     let batchLine = '';
     let currentBatchMm = batchMm321;
@@ -88,11 +90,13 @@ const TankForm323321: React.FC = () => {
     }
 
     setResult([
+      warning,
       `Перекачиваем 321 до: ${formatNumber(actualTarget)} мм`,
       `Из 321 убывает: ${formatNumber(pumpMm)} мм`,
       `В 323 прибывает: ${formatNumber(addedPercentTo323, 1)}% (коэфф. ${formatNumber(mmPerPercent, 2)} мм/%)`,
       `Итоговый уровень в 323: ${formatNumber(totalPercentIn323, 1)}%`,
-      `На сколько раствора хватит при расходе ${formatNumber(rate, 1)} %/ч: ${formatNumber(hours, 2)} ч`,
+      `Полезный объем (сверх ${minLevel323}%): ${formatNumber(usefulPercent, 1)}%`,
+      `На сколько хватит полезного объема: ${formatNumber(hours, 2)} ч`,
       batchLine
     ].filter(Boolean).join('\n'));
   };
