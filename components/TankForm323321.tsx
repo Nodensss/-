@@ -1,18 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { parseInput, formatNumber } from '../utils';
 import { InputField, ChipGroup, ResultBox } from './UIComponents';
 import { Calculator } from 'lucide-react';
+import { SharedTankData } from '../App';
 
-const TankForm323321: React.FC = () => {
-  const [level323, setLevel323] = useState('');
-  const [level321, setLevel321] = useState('');
-  const [flowRate, setFlowRate] = useState('');
-  const [result, setResult] = useState('');
+interface TankForm323321Props {
+  sharedData: SharedTankData;
+  updateSharedData: (updates: Partial<SharedTankData>) => void;
+}
 
-  // Target Logic
-  const [target321, setTarget321] = useState<number>(160.0);
+const TankForm323321: React.FC<TankForm323321Props> = ({ sharedData, updateSharedData }) => {
+  // Target Logic - initialize from sharedData
+  const [target321, setTarget321] = useState<number>(sharedData.target321);
   const [useCustom321, setUseCustom321] = useState(false);
   const [customTarget321Str, setCustomTarget321Str] = useState('');
+
+  // Update shared state when target changes
+  useEffect(() => {
+    updateSharedData({ target321 });
+  }, [target321]);
 
   // Batch Logic
   const [batchMm321, setBatchMm321] = useState<number | null>(null);
@@ -29,17 +35,17 @@ const TankForm323321: React.FC = () => {
   const mmPerPercent = proportionVolume321 / proportionIncrease323;
 
   const calculate = () => {
-    const l323 = parseInput(level323);
-    const l321 = parseInput(level321);
-    const rate = parseInput(flowRate);
+    const l323 = parseInput(sharedData.level323);
+    const l321 = parseInput(sharedData.level321);
+    const rate = parseInput(sharedData.flowRate323);
 
     if (l323 === null || l321 === null || rate === null) {
-      setResult('Проверь ввод: нужны три числа.');
+      updateSharedData({ result323321: 'Проверь ввод: нужны три числа.' });
       return;
     }
 
     if (rate <= 0) {
-      setResult('Скорость должна быть > 0.');
+      updateSharedData({ result323321: 'Скорость должна быть > 0.' });
       return;
     }
 
@@ -51,14 +57,16 @@ const TankForm323321: React.FC = () => {
     // Determine actual target
     let actualTarget = target321;
     if (useCustom321) {
-        const parsedCustom = parseInput(customTarget321Str);
-        if (parsedCustom !== null) {
-            actualTarget = parsedCustom;
-        }
+      const parsedCustom = parseInput(customTarget321Str);
+      if (parsedCustom !== null) {
+        actualTarget = parsedCustom;
+      }
     }
 
     if (l321 <= actualTarget) {
-      setResult(`В 321 уже ${formatNumber(l321)} мм, это ≤ выбранного значения ${formatNumber(actualTarget)} мм. Перекачка не нужна.`);
+      updateSharedData({
+        result323321: `В 321 уже ${formatNumber(l321)} мм, это ≤ выбранного значения ${formatNumber(actualTarget)} мм. Перекачка не нужна.`
+      });
       return;
     }
 
@@ -67,20 +75,20 @@ const TankForm323321: React.FC = () => {
 
     // Convert mm -> % for time calculation based on rate (%/h)
     const addedPercentTo323 = pumpMm / mmPerPercent;
-    
+
     // Calculate total time based on current level + added amount
     const totalPercentIn323 = l323 + addedPercentTo323;
-    
+
     // Dead Volume Logic: 30% is unusable
     const usefulPercent = Math.max(totalPercentIn323 - minLevel323, 0);
     const hours = usefulPercent / rate;
 
     let batchLine = '';
     let currentBatchMm = batchMm321;
-    
+
     if (useCustomBatch321) {
-         const parsedBatch = parseInput(customBatch321Str);
-         currentBatchMm = parsedBatch;
+      const parsedBatch = parseInput(customBatch321Str);
+      currentBatchMm = parsedBatch;
     }
 
     if (currentBatchMm !== null && currentBatchMm > 0) {
@@ -89,16 +97,35 @@ const TankForm323321: React.FC = () => {
       batchLine = `\nЕсли потом приготовим новый раствор объёмом ${formatNumber(currentBatchMm)} мм, то при расходе ${formatNumber(rate, 1)} %/ч его хватит на ${formatNumber(batchHours, 2)} ч`;
     }
 
-    setResult([
-      warning,
-      `Перекачиваем 321 до: ${formatNumber(actualTarget)} мм`,
-      `Из 321 убывает: ${formatNumber(pumpMm)} мм`,
-      `В 323 прибывает: ${formatNumber(addedPercentTo323, 1)}% (коэфф. ${formatNumber(mmPerPercent, 2)} мм/%)`,
-      `Итоговый уровень в 323: ${formatNumber(totalPercentIn323, 1)}%`,
-      `Полезный объем (сверх ${minLevel323}%): ${formatNumber(usefulPercent, 1)}%`,
-      `На сколько хватит полезного объема: ${formatNumber(hours, 2)} ч`,
-      batchLine
-    ].filter(Boolean).join('\n'));
+    // Calculate time when solution will end (reach 30%)
+    const currentDate = new Date();
+    const endTimeDate = new Date(currentDate.getTime() + hours * 60 * 60 * 1000);
+    const endTimeStr = `${endTimeDate.getHours().toString().padStart(2, '0')}:${endTimeDate.getMinutes().toString().padStart(2, '0')}`;
+
+    // Add batch end time if batch is selected
+    let batchEndTimeLine = '';
+    if (currentBatchMm !== null && currentBatchMm > 0) {
+      const batchPercent = currentBatchMm / mmPerPercent;
+      const batchHours = batchPercent / rate;
+      const batchEndTimeDate = new Date(endTimeDate.getTime() + batchHours * 60 * 60 * 1000);
+      const batchEndTimeStr = `${batchEndTimeDate.getHours().toString().padStart(2, '0')}:${batchEndTimeDate.getMinutes().toString().padStart(2, '0')}`;
+      batchEndTimeLine = `Новый раствор закончится в: ${batchEndTimeStr}`;
+    }
+
+    updateSharedData({
+      result323321: [
+        warning,
+        `Перекачиваем 321 до: ${formatNumber(actualTarget)} мм`,
+        `Из 321 убывает: ${formatNumber(pumpMm)} мм`,
+        `В 323 прибывает: ${formatNumber(addedPercentTo323, 1)}% (коэфф. ${formatNumber(mmPerPercent, 2)} мм/%)`,
+        `Итоговый уровень в 323: ${formatNumber(totalPercentIn323, 1)}%`,
+        `Полезный объем (сверх ${minLevel323}%): ${formatNumber(usefulPercent, 1)}%`,
+        `На сколько хватит полезного объема: ${formatNumber(hours, 2)} ч`,
+        `Раствор закончится (323 достигнет 30%) в: ${endTimeStr}`,
+        batchLine,
+        batchEndTimeLine
+      ].filter(Boolean).join('\n')
+    });
   };
 
   const handleTargetSelect = (val: number | null, isCustom: boolean) => {
@@ -106,6 +133,12 @@ const TankForm323321: React.FC = () => {
     if (!isCustom && val !== null) {
       setTarget321(val);
       setCustomTarget321Str('');
+    } else if (isCustom) {
+      // Update target from custom input when changed
+      const parsedCustom = parseInput(customTarget321Str);
+      if (parsedCustom !== null) {
+        setTarget321(parsedCustom);
+      }
     }
   };
 
@@ -120,22 +153,22 @@ const TankForm323321: React.FC = () => {
   return (
     <div className="bg-teal-50 p-4 rounded-lg min-h-[calc(100vh-120px)]">
       <div className="max-w-lg mx-auto bg-white/50 p-6 rounded-xl backdrop-blur-sm shadow-sm">
-        <InputField 
-          label="Уровень в 323 (%)" 
-          value={level323} 
-          onChange={(e) => setLevel323(e.target.value)} 
+        <InputField
+          label="Уровень в 323 (%)"
+          value={sharedData.level323}
+          onChange={(e) => updateSharedData({ level323: e.target.value })}
           placeholder="Например: 45"
         />
-        <InputField 
-          label="Уровень в 321 (мм)" 
-          value={level321} 
-          onChange={(e) => setLevel321(e.target.value)} 
+        <InputField
+          label="Уровень в 321 (мм)"
+          value={sharedData.level321}
+          onChange={(e) => updateSharedData({ level321: e.target.value })}
           placeholder="Например: 500"
         />
-        <InputField 
-          label="Расход (%/ч)" 
-          value={flowRate} 
-          onChange={(e) => setFlowRate(e.target.value)} 
+        <InputField
+          label="Расход (%/ч)"
+          value={sharedData.flowRate323}
+          onChange={(e) => updateSharedData({ flowRate323: e.target.value })}
           placeholder="Например: 2.5"
         />
 
@@ -183,7 +216,7 @@ const TankForm323321: React.FC = () => {
           </button>
         </div>
 
-        <ResultBox result={result} />
+        <ResultBox result={sharedData.result323321} />
       </div>
     </div>
   );

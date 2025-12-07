@@ -1,23 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { parseInput, formatNumber } from '../utils';
 import { InputField, ChipGroup, ResultBox } from './UIComponents';
 import { Calculator } from 'lucide-react';
+import { SharedTankData } from '../App';
 
 // Transfer proportion: when 315 loses 1mm, 324 gains 1.2814mm
 // Based on real data: 315 (427→260, -167mm) → 324 (360→574, +214mm)
 // Coefficient: 214/167 ≈ 1.2814
 const TRANSFER_PROPORTION_315_TO_324 = 1.2814;
 
-const TankForm315324: React.FC = () => {
-  const [level315, setLevel315] = useState('');
-  const [level324, setLevel324] = useState('');
-  const [consumptionRate, setConsumptionRate] = useState('');
-  const [result, setResult] = useState('');
+interface TankForm315324Props {
+  sharedData: SharedTankData;
+  updateSharedData: (updates: Partial<SharedTankData>) => void;
+}
 
-  // Target Logic
-  const [target315, setTarget315] = useState<number>(260.0);
+const TankForm315324: React.FC<TankForm315324Props> = ({ sharedData, updateSharedData }) => {
+  // Target Logic - initialize from sharedData
+  const [target315, setTarget315] = useState<number>(sharedData.target315);
   const [useCustom315, setUseCustom315] = useState(false);
   const [customTarget315Str, setCustomTarget315Str] = useState('');
+
+  // Update shared state when target changes
+  useEffect(() => {
+    updateSharedData({ target315 });
+  }, [target315]);
 
   // Batch Logic
   const [batchMm315, setBatchMm315] = useState<number | null>(null);
@@ -28,16 +34,16 @@ const TankForm315324: React.FC = () => {
   const minLevel324 = 350.0; // Dead volume in mm
 
   const calculate = () => {
-    const l315 = parseInput(level315);
-    const l324 = parseInput(level324);
-    const rate = parseInput(consumptionRate);
+    const l315 = parseInput(sharedData.level315);
+    const l324 = parseInput(sharedData.level324);
+    const rate = parseInput(sharedData.consumptionRate324);
 
     if (l315 === null || l324 === null || rate === null) {
-      setResult('Проверь ввод: три числа.');
+      updateSharedData({ result315324: 'Проверь ввод: три числа.' });
       return;
     }
     if (rate <= 0) {
-      setResult('Скорость должна быть > 0.');
+      updateSharedData({ result315324: 'Скорость должна быть > 0.' });
       return;
     }
 
@@ -49,24 +55,26 @@ const TankForm315324: React.FC = () => {
     // Determine actual target
     let actualTarget = target315;
     if (useCustom315) {
-        const parsedCustom = parseInput(customTarget315Str);
-        if (parsedCustom !== null) {
-            actualTarget = parsedCustom;
-        }
+      const parsedCustom = parseInput(customTarget315Str);
+      if (parsedCustom !== null) {
+        actualTarget = parsedCustom;
+      }
     }
 
     if (l315 <= actualTarget) {
-      setResult(`В 315 уже ${formatNumber(l315)} мм, это ≤ выбранного значения ${formatNumber(actualTarget)} мм. Перекачка не требуется.`);
+      updateSharedData({
+        result315324: `В 315 уже ${formatNumber(l315)} мм, это ≤ выбранного значения ${formatNumber(actualTarget)} мм. Перекачка не требуется.`
+      });
       return;
     }
 
     const mmToTransfer = Math.max(l315 - actualTarget, 0);
-    
+
     // Calculate final level in 324 considering transfer proportion
     // When 315 loses X mm, 324 gains X * TRANSFER_PROPORTION_315_TO_324 mm
     const mmGainedIn324 = mmToTransfer * TRANSFER_PROPORTION_315_TO_324;
     const finalLevel324 = l324 + mmGainedIn324;
-    
+
     // Dead Volume Logic: 350mm is unusable
     const usefulMm = Math.max(finalLevel324 - minLevel324, 0);
     const hours = usefulMm / rate;
@@ -75,9 +83,9 @@ const TankForm315324: React.FC = () => {
     let currentBatchMm = batchMm315;
 
     if (useCustomBatch315) {
-        const parsedBatch = parseInput(customBatch315Str);
-        currentBatchMm = parsedBatch;
-   }
+      const parsedBatch = parseInput(customBatch315Str);
+      currentBatchMm = parsedBatch;
+    }
 
     if (currentBatchMm !== null && currentBatchMm > 0) {
       const batchMmIn324 = currentBatchMm * TRANSFER_PROPORTION_315_TO_324;
@@ -85,16 +93,35 @@ const TankForm315324: React.FC = () => {
       batchLine = `\nЕсли потом приготовим новый раствор ${formatNumber(currentBatchMm)} мм (по 315) = ${formatNumber(batchMmIn324, 1)} мм (по 324), то при расходе ${formatNumber(rate, 1)} мм/ч его хватит на ${formatNumber(batchHours, 2)} ч`;
     }
 
-    setResult([
-      warning,
-      `Перекачиваем 315 до: ${formatNumber(actualTarget)} мм`,
-      `Из 315 убывает: ${formatNumber(mmToTransfer, 1)} мм`,
-      `В 324 прибывает: ${formatNumber(mmGainedIn324, 1)} мм (коэфф. ×${TRANSFER_PROPORTION_315_TO_324})`,
-      `Итоговый уровень в 324: ${formatNumber(finalLevel324, 1)} мм`,
-      `Полезный объем (сверх ${minLevel324} мм): ${formatNumber(usefulMm, 1)} мм`,
-      `На сколько хватит полезного объема: ${formatNumber(hours, 2)} ч`,
-      batchLine
-    ].filter(Boolean).join('\n'));
+    // Calculate time when solution will end (reach 350mm)
+    const currentDate = new Date();
+    const endTimeDate = new Date(currentDate.getTime() + hours * 60 * 60 * 1000);
+    const endTimeStr = `${endTimeDate.getHours().toString().padStart(2, '0')}:${endTimeDate.getMinutes().toString().padStart(2, '0')}`;
+
+    // Add batch end time if batch is selected
+    let batchEndTimeLine = '';
+    if (currentBatchMm !== null && currentBatchMm > 0) {
+      const batchMmIn324 = currentBatchMm * TRANSFER_PROPORTION_315_TO_324;
+      const batchHours = batchMmIn324 / rate;
+      const batchEndTimeDate = new Date(endTimeDate.getTime() + batchHours * 60 * 60 * 1000);
+      const batchEndTimeStr = `${batchEndTimeDate.getHours().toString().padStart(2, '0')}:${batchEndTimeDate.getMinutes().toString().padStart(2, '0')}`;
+      batchEndTimeLine = `Новый раствор закончится в: ${batchEndTimeStr}`;
+    }
+
+    updateSharedData({
+      result315324: [
+        warning,
+        `Перекачиваем 315 до: ${formatNumber(actualTarget)} мм`,
+        `Из 315 убывает: ${formatNumber(mmToTransfer, 1)} мм`,
+        `В 324 прибывает: ${formatNumber(mmGainedIn324, 1)} мм (коэфф. ×${TRANSFER_PROPORTION_315_TO_324})`,
+        `Итоговый уровень в 324: ${formatNumber(finalLevel324, 1)} мм`,
+        `Полезный объем (сверх ${minLevel324} мм): ${formatNumber(usefulMm, 1)} мм`,
+        `На сколько хватит полезного объема: ${formatNumber(hours, 2)} ч`,
+        `Раствор закончится (324 достигнет 350 мм) в: ${endTimeStr}`,
+        batchLine,
+        batchEndTimeLine
+      ].filter(Boolean).join('\n')
+    });
   };
 
   const handleTargetSelect = (val: number | null, isCustom: boolean) => {
@@ -116,22 +143,22 @@ const TankForm315324: React.FC = () => {
   return (
     <div className="bg-orange-50 p-4 rounded-lg min-h-[calc(100vh-120px)]">
       <div className="max-w-lg mx-auto bg-white/50 p-6 rounded-xl backdrop-blur-sm shadow-sm">
-        <InputField 
-          label="Уровень в 324 (мм)" 
-          value={level324} 
-          onChange={(e) => setLevel324(e.target.value)} 
+        <InputField
+          label="Уровень в 324 (мм)"
+          value={sharedData.level324}
+          onChange={(e) => updateSharedData({ level324: e.target.value })}
           placeholder="Например: 200"
         />
-        <InputField 
-          label="Уровень в 315 (мм)" 
-          value={level315} 
-          onChange={(e) => setLevel315(e.target.value)} 
+        <InputField
+          label="Уровень в 315 (мм)"
+          value={sharedData.level315}
+          onChange={(e) => updateSharedData({ level315: e.target.value })}
           placeholder="Например: 600"
         />
-        <InputField 
-          label="Скорость расхода (мм/ч)" 
-          value={consumptionRate} 
-          onChange={(e) => setConsumptionRate(e.target.value)} 
+        <InputField
+          label="Скорость расхода (мм/ч)"
+          value={sharedData.consumptionRate324}
+          onChange={(e) => updateSharedData({ consumptionRate324: e.target.value })}
           placeholder="Например: 15"
         />
 
@@ -179,7 +206,7 @@ const TankForm315324: React.FC = () => {
           </button>
         </div>
 
-        <ResultBox result={result} />
+        <ResultBox result={sharedData.result315324} />
       </div>
     </div>
   );
