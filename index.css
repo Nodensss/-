@@ -1,0 +1,30 @@
+/* Макет: нейтральная палитра, цвет только для отклонений. */
+.mnemo { background:#e4e4e4; color:#222; padding:16px; min-height:calc(100vh - 115px); font:14px/1.45 Arial,sans-serif; }
+.mnemo button,.mnemo select { font:inherit; cursor:pointer; border:1px solid #999; background:#f5f5f5; color:#222; padding:6px 9px; border-radius:2px; }
+.mnemo button:focus-visible,.mnemo select:focus-visible { outline:2px solid #222; outline-offset:2px; }
+.mnemo-banner { border:1px solid #888; background:#f0f0f0; padding:9px 12px; margin-bottom:12px; }
+.mnemo-toolbar { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:12px; }
+.mnemo-toolbar h2 { font-weight:700; margin-right:auto; font-size:17px; }
+.mnemo-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+.mnemo-pair { min-width:0; border:1px solid #aaa; padding:12px; background:#eee; }
+.mnemo-flow { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:12px; }
+.mnemo-flow div { display:grid; text-align:center; border:2px solid #777; border-top-width:5px; padding:5px 12px; background:#e2e2e2; }
+.mnemo-flow strong { font-size:18px; }
+.mnemo-flow span { font-size:12px; }
+.mnemo .mnemo-block { display:block; text-align:left; width:100%; background:#fafafa; padding:12px; min-height:250px; }
+.mnemo-block strong,.mnemo-block span,.mnemo-block em,.mnemo-block small { display:block; margin:3px 0; }
+.mnemo-block strong { border-bottom:1px solid #aaa; padding-bottom:6px; margin-bottom:6px; font-size:16px; }
+.mnemo .status-1 { border-left:5px solid #ae7c05; }
+.mnemo .status-2 { border-left:5px solid #ad2525; }
+.mnemo .status-3 { border-left:5px solid #777; }
+.mnemo small { color:#555; font-size:11px; }
+.mnemo-trend { margin:10px 0; background:#f7f7f7; padding:5px; border:1px solid #bbb; }
+.mnemo-trend svg { width:100%; height:100px; }
+.mnemo-events { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+.mnemo-parameters { border:1px solid #999; padding:12px; background:#f9f9f9; margin-top:8px; }
+.mnemo-parameters h3 { font-weight:bold; margin-bottom:8px; }
+.mnemo-parameters label { display:block; margin-bottom:6px; }
+.mnemo-footnote { margin-top:14px; color:#555; font-size:12px; max-width:1050px; }
+.app-tabs button { min-width:0; letter-spacing:0; font-size:12px; padding:10px 2px; text-transform:none; }
+@media(max-width:700px) { .mnemo-grid { grid-template-columns:1fr; } .mnemo { padding:10px; } .mnemo-pair { padding:9px; } .mnemo .mnemo-block { padding:9px; font-size:12px; } .mnemo-block strong { font-size:14px; } .mnemo-flow div { padding:4px 8px; } }
+@media print { header,.mnemo-toolbar,.mnemo-events { display:none; } }

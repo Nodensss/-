@@ -23,10 +23,10 @@ interface TankSimulationProps {
 const TankSimulation: React.FC<TankSimulationProps> = ({ sharedData }) => {
     // Use shared data for initial values
     const getInitialLevelsFromShared = (): TankLevels => ({
-        tank321: parseInput(sharedData.level321) || 500,
-        tank323: parseInput(sharedData.level323) || 45,
-        tank315: parseInput(sharedData.level315) || 600,
-        tank324: parseInput(sharedData.level324) || 200,
+        tank321: parseInput(sharedData.level321) ?? 500,
+        tank323: parseInput(sharedData.level323) ?? 45,
+        tank315: parseInput(sharedData.level315) ?? 600,
+        tank324: parseInput(sharedData.level324) ?? 200,
     });
 
     // Initial levels
@@ -69,8 +69,8 @@ const TankSimulation: React.FC<TankSimulationProps> = ({ sharedData }) => {
 
     // Calculate state at specific time
     const calculateStateAtTime = useCallback((timeHours: number): { levels: TankLevels; transfers: TransferState } => {
-        const rate324 = parseInput(consumptionRate324) || 15;
-        const rate323 = parseInput(consumptionRate323) || 2.5;
+        const rate324 = parseInput(consumptionRate324) ?? 15;
+        const rate323 = parseInput(consumptionRate323) ?? 2.5;
 
         let levels = { ...initialLevels };
         let transfers = { transfer315to324: false, transfer321to323: false };
@@ -117,7 +117,7 @@ const TankSimulation: React.FC<TankSimulationProps> = ({ sharedData }) => {
         }
 
         return { levels, transfers };
-    }, [initialLevels, consumptionRate324, consumptionRate323]);
+    }, [initialLevels, consumptionRate324, consumptionRate323, sharedData.target315, sharedData.target321]);
 
     // Update current state when time changes
     useEffect(() => {

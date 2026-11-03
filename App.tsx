@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import TankForm323321 from './components/TankForm323321';
 import TankForm315324 from './components/TankForm315324';
 import TankSimulation from './components/TankSimulation';
+import MnemoMockup from './components/MnemoMockup';
 import { PAIR_321, PAIR_315 } from './core';
 import { Droplets } from 'lucide-react';
 
@@ -22,7 +23,7 @@ export interface SharedTankData {
 }
 
 const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<0 | 1 | 2>(0);
+  const [activeTab, setActiveTab] = useState<0 | 1 | 2 | 3>(0);
 
   // Shared state for all tabs
   const [sharedData, setSharedData] = useState<SharedTankData>({
@@ -53,7 +54,7 @@ const App: React.FC = () => {
         </div>
 
         {/* Tabs */}
-        <div className="max-w-4xl mx-auto flex">
+        <div className="app-tabs max-w-4xl mx-auto flex">
           <button
             onClick={() => setActiveTab(0)}
             className={`flex-1 py-3 text-sm font-medium uppercase tracking-wider border-b-4 transition-colors ${activeTab === 0
@@ -81,6 +82,9 @@ const App: React.FC = () => {
           >
             Симуляция
           </button>
+          <button onClick={() => setActiveTab(3)} className={`flex-1 border-b-4 ${activeTab === 3 ? 'border-white bg-indigo-700/50 text-white' : 'border-transparent text-indigo-200'}`}>
+            Мнемосхема<br />(макет)
+          </button>
         </div>
       </header>
 
@@ -90,8 +94,10 @@ const App: React.FC = () => {
           <TankForm323321 sharedData={sharedData} updateSharedData={updateSharedData} />
         ) : activeTab === 1 ? (
           <TankForm315324 sharedData={sharedData} updateSharedData={updateSharedData} />
-        ) : (
+        ) : activeTab === 2 ? (
           <TankSimulation sharedData={sharedData} />
+        ) : (
+          <MnemoMockup sharedData={sharedData} />
         )}
       </main>
     </div>

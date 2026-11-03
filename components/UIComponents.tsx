@@ -4,17 +4,20 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label: string;
 }
 
-export const InputField: React.FC<InputProps> = ({ label, className = '', ...props }) => (
+export const InputField: React.FC<InputProps> = ({ label, className = '', ...props }) => {
+  const id = React.useId();
+  return (
   <div className="mb-4">
-    <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-    <input
+    <label htmlFor={id} className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+    <input id={id}
       className={`w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${className}`}
-      type="text" // Keep as text to allow commas during typing
+      type="text" // Текстовый ввод допускает десятичную запятую.
       inputMode="decimal"
       {...props}
     />
   </div>
-);
+  );
+};
 
 interface ChipGroupProps<T> {
   label: string;
