@@ -122,7 +122,7 @@
 | X_SRC | sourceMm | мм |
 | ADD_FEED / L_FIN | addedFeed / finalLevel | единицы расходной |
 | H1 / TRANSFER_VALID | hoursAfter / valid && sourceValid | ч |
-| H_BATCH / BATCH_VALID | batchHours !== null | ч; 0 партии отключает выход |
+| H_BATCH / BATCH_VALID | batchHours / batchHours !== null | ч; 0 партии отключает выход |
 | OVERFILL / SRC_MIN_NO_OVERFILL | overfill / sourceMinNoOverfillMm | флаг / мм |
 | STATUS | status | 0..3 |
 | PARAM_OK | конфигурация PairConfig | проверка параметров экземпляра |

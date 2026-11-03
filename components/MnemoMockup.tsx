@@ -4,6 +4,15 @@ import { PAIR_321, PAIR_315, type PairConfig, parseInput, forecast, forecastLine
   formatClock, RATE_LABELS, calculateRate } from '../core';
 import { createPlant, advancePlant, plantEvent, type PlantState } from '../sim/plantSim';
 import { InputField } from './UIComponents';
+// Сохраняем промежуточный текст (например «2,»), пока пользователь вводит число.
+function ModelNumberField({ label, value, onValid }: { label: string; value: number; onValid: (value: number) => void }) {
+  const [text, setText] = useState(String(value));
+  useEffect(() => setText(current => parseInput(current) === value ? current : String(value)), [value]);
+  return <InputField label={label} value={text} onChange={event => {
+    setText(event.target.value); const parsed = parseInput(event.target.value);
+    if (parsed !== null && parsed >= 0) onValid(parsed);
+  }} />;
+}
 function Trend({ config, plant }: { config: PairConfig; plant: PlantState }) {
   const result = calculateRate({ ...config, windowMin: 120 }, { samples: plant.trend.slice(-121), now: plant.at });
   // Полный трёхчасовой тренд, маска исключений рассчитывается тем же ядром по двум перекрывающимся окнам.
@@ -42,14 +51,16 @@ function PairPanel({ config, initial, running, speed }: { config: PairConfig; in
     return () => clearInterval(timer);
   }, [config, running, speed]);
   const manualValue = parseInput(manualText);
+  useEffect(() => setPlant(current => ({ ...current, manualRatePerHour: manual ? manualValue ?? NaN : null })), [manual, manualText]);
   const rate = calculateRate(config, { samples: plant.history.samples, now: plant.at, startedAt: plant.history.startedAt,
     lastGood: plant.rate.lastGood, manualRatePerHour: manual ? manualValue ?? NaN : null });
   const feedMax = parseInput(feedMaxText);
+  const maxInvalid = Boolean(feedMaxText.trim()) && (feedMax === null || feedMax <= 0);
   const result = forecast({ ...config, feedMax }, { sourceLevelMm: plant.sourceLevelMm, feedLevel: plant.history.samples.at(-1).level,
-    ratePerHour: rate.valid ? rate.ratePerHour : null, targetMm: plant.targetMm, batchMm: plant.batchMm,
+    ratePerHour: rate.valid && !maxInvalid ? rate.ratePerHour : null, targetMm: plant.targetMm, batchMm: plant.batchMm,
     now: plant.at, sourceOk, feedOk: plant.history.samples.at(-1).ok });
   const lines = forecastLines(config, result, plant.targetMm, plant.batchMm, rate.ratePerHour, plant.at,
-    manual ? 'РУЧН' : 'авто', rate.valid ? '' : RATE_LABELS[rate.state]);
+    manual ? 'РУЧН' : 'авто', maxInvalid ? 'Проверь максимум: положительное число или пустое поле' : rate.valid ? '' : RATE_LABELS[rate.state]);
   const modeHint = [rate.transferNow ? 'идёт перекачка' : '', rate.state === 2 ? `расход удержан (${formatDecimal(rate.holdAgeMin)} мин назад)` : '',
     rate.excludedMin ? 'часть окна исключена (перекачка/сбой)' : '', manual ? 'РУЧН' : ''].filter(Boolean).join(' · ');
   const numericChange = (value: string, key: 'trueRatePerHour' | 'noise' | 'batchMm' | 'targetMm') => {
@@ -71,7 +82,7 @@ function PairPanel({ config, initial, running, speed }: { config: PairConfig; in
       <label>Цель, мм <select value={targetChoice} onChange={e => { const value = e.target.value; setTargetChoice(value); if (value !== 'custom') numericChange(value, 'targetMm'); }}>
         {config.targetsMm.map(value => <option key={value} value={value}>{value}</option>)}<option value="custom">другое</option></select></label>
       {targetChoice === 'custom' && <InputField label="Другая цель, мм" value={customTargetText} onChange={e => { setCustomTargetText(e.target.value); numericChange(e.target.value, 'targetMm'); }} />}
-      <InputField label="Новая партия, мм (0 — не считать)" value={String(plant.batchMm)} onChange={e => numericChange(e.target.value, 'batchMm')} />
+      <ModelNumberField label="Новая партия, мм (0 — не считать)" value={plant.batchMm} onValid={batchMm => setPlant(s => ({...s,batchMm}))} />
       <label><input type="checkbox" checked={manual} onChange={e => setManual(e.target.checked)} /> Ручной расход</label>
       {manual && <InputField label={`Ручной расход, ${config.unit}/ч`} value={manualText} onChange={e => setManualText(e.target.value)} />}
       <InputField label={`Максимум ${config.feed}, ${config.unit} — УТОЧНИТЬ (пусто: выключено)`} value={feedMaxText} onChange={e => setFeedMaxText(e.target.value)} />
@@ -83,11 +94,11 @@ function PairPanel({ config, initial, running, speed }: { config: PairConfig; in
       <button onClick={() => setPlant(s => plantEvent(config,s,'prepare'))}>Имитировать партию (20 мин)</button>
       <button onClick={() => setPlant(s => plantEvent(config,s,'fault'))}>Отказ датчика (10 мин)</button>
       <button onClick={() => setPlant(s => advancePlant(config,s,60))}>+60 мин модели</button>
-      <button onClick={() => setPlant(initial())}>Сброс модели</button>
+      <button onClick={() => { setManual(false); setPlant(initial()); }}>Сброс модели</button>
     </div>
     <details><summary>Настройки имитатора</summary>
-      <InputField label={`Заданный расход, ${config.unit}/ч`} value={String(plant.trueRatePerHour)} onChange={e => numericChange(e.target.value,'trueRatePerHour')} />
-      <InputField label={`Шум ±, ${config.unit}`} value={String(plant.noise)} onChange={e => numericChange(e.target.value,'noise')} />
+      <ModelNumberField label={`Заданный расход, ${config.unit}/ч`} value={plant.trueRatePerHour} onValid={trueRatePerHour => setPlant(s => ({...s,trueRatePerHour}))} />
+      <ModelNumberField label={`Шум ±, ${config.unit}`} value={plant.noise} onValid={noise => setPlant(s => ({...s,noise}))} />
       <label><input type="checkbox" checked={plant.autoTransfer} onChange={e => setPlant(s => ({...s,autoTransfer:e.target.checked}))} /> Автоперекачка в модели у неснижаемого остатка</label>
     </details>
   </section>;

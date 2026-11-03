@@ -10,7 +10,7 @@ for (const [config, feed, rate] of [[PAIR_321, 45, 2.5], [PAIR_315, 450, 15]] as
     state = plantEvent(config, state, 'transfer');
     for (let i = 0; i < 75; i++) {
       state = advancePlant(config, state, 1);
-      if (state.rate.valid) expect(state.rate.ratePerHour).toBeGreaterThan(0);
+      if (state.rate.ratePerHour !== null) expect(state.rate.ratePerHour).toBeGreaterThan(0);
     }
     expect(Math.abs(state.rate.ratePerHour - rate) / rate).toBeLessThanOrEqual(0.25);
   });
@@ -37,4 +37,10 @@ it('Приготовление партии и автоперекачка отн
   expect(s.sourceLevelMm).toBeCloseTo(542);
   s = advancePlant(PAIR_321, { ...s, autoTransfer: true, noise: 0 }, 10);
   expect(s.sourceLevelMm).toBeCloseTo(160); expect(s.feedLevel).toBeGreaterThan(30);
+});
+it('Ручной режим не обновляет сохранённый авторасход', () => {
+  let s = advancePlant(PAIR_321, createPlant(PAIR_321,500,60,2.5,160,now),60);
+  const last = s.rate.lastGood;
+  s = advancePlant(PAIR_321,{...s,manualRatePerHour:7},30);
+  expect(s.rate.state).toBe(6); expect(s.rate.ratePerHour).toBe(7); expect(s.rate.lastGood).toEqual(last);
 });

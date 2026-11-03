@@ -7,37 +7,37 @@ import { PAIR_321, PAIR_315 } from './core';
 import { Droplets } from 'lucide-react';
 
 export interface SharedTankData {
-  // System 321 → 323
+  // Связка 321 → 323
   level323: string;
   level321: string;
   flowRate323: string;
   result323321: string;
-  target321: number; // Target level for 321 transfer (160, 0, or custom)
+  target321: number; // Расчётная цель, варианты в конфигурации.
 
-  // System 315 → 324
+  // Связка 315 → 324
   level315: string;
   level324: string;
   consumptionRate324: string;
   result315324: string;
-  target315: number; // Target level for 315 transfer (260, 0, or custom)
+  target315: number; // Расчётная цель, варианты в конфигурации.
 }
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<0 | 1 | 2 | 3>(0);
 
-  // Shared state for all tabs
+  // Общие данные вкладок.
   const [sharedData, setSharedData] = useState<SharedTankData>({
     level323: '45',
     level321: '500',
     flowRate323: '2.5',
     result323321: '',
-    target321: PAIR_321.targetsMm[0], // Default target
+    target321: PAIR_321.targetsMm[0], // Цель по умолчанию.
 
     level315: '600',
     level324: '200',
     consumptionRate324: '15',
     result315324: '',
-    target315: PAIR_315.targetsMm[0], // Default target
+    target315: PAIR_315.targetsMm[0], // Цель по умолчанию.
   });
 
   const updateSharedData = (updates: Partial<SharedTankData>) => {
@@ -46,14 +46,14 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* AppBar / Header */}
+      {/* Заголовок */}
       <header className="bg-indigo-600 text-white shadow-lg sticky top-0 z-50">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center gap-3">
           <Droplets className="w-6 h-6" />
           <h1 className="text-xl font-bold tracking-wide">Tank App</h1>
         </div>
 
-        {/* Tabs */}
+        {/* Вкладки */}
         <div className="app-tabs max-w-4xl mx-auto flex">
           <button
             onClick={() => setActiveTab(0)}
@@ -88,7 +88,7 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      {/* Content Body */}
+      {/* Содержимое */}
       <main className="w-full">
         {activeTab === 0 ? (
           <TankForm323321 sharedData={sharedData} updateSharedData={updateSharedData} />

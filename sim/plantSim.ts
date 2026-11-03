@@ -2,7 +2,7 @@ import { appendSample, calculateRate, emptyHistory, evolveLevels, transfer,
   type PairConfig, type LevelHistory, type LevelSample, type RateResult } from '../core';
 export interface PlantState {
   at: number; sourceLevelMm: number; feedLevel: number; seed: number; noise: number;
-  trueRatePerHour: number; targetMm: number; batchMm: number; autoTransfer: boolean;
+  trueRatePerHour: number; manualRatePerHour: number | null; targetMm: number; batchMm: number; autoTransfer: boolean;
   transferRemainingMm: number; transferStepMm: number; prepareRemainingMm: number; prepareStepMm: number;
   faultRemainingMin: number; history: LevelHistory; trend: LevelSample[]; rate: RateResult;
 }
@@ -19,7 +19,7 @@ export function createPlant(config: PairConfig, sourceLevelMm: number, feedLevel
   trueRatePerHour: number, targetMm: number, at: number, seed = 321): PlantState {
   const sample = { at, level: feedLevel, ok: true, transferOn: false };
   const history = appendSample(emptyHistory(), sample, config.dtMin, config.windowMin);
-  return { at, sourceLevelMm, feedLevel, trueRatePerHour, targetMm, seed, noise: config.noise,
+  return { at, sourceLevelMm, feedLevel, trueRatePerHour, manualRatePerHour: null, targetMm, seed, noise: config.noise,
     batchMm: config.batchesMm[0], autoTransfer: false, transferRemainingMm: 0, transferStepMm: 0,
     prepareRemainingMm: 0, prepareStepMm: 0, faultRemainingMin: 0, history, trend: [sample],
     rate: calculateRate(config, { samples: history.samples, startedAt: at, now: at }) };
@@ -39,7 +39,7 @@ export function plantEvent(config: PairConfig, state: PlantState, event: PlantEv
   const samples = state.history.samples.map((s, i, all) => i === all.length - 1 ? { ...s, ok: false } : s);
   const trend = state.trend.map((s, i, all) => i === all.length - 1 ? { ...s, ok: false } : s);
   return { ...state, faultRemainingMin: MODEL_FAULT_MIN, history: { ...state.history, samples }, trend,
-    rate: calculateRate(config, { samples, startedAt: state.history.startedAt, now: state.at, lastGood: state.rate.lastGood }) };
+    rate: calculateRate(config, { samples, startedAt: state.history.startedAt, now: state.at, lastGood: state.rate.lastGood, manualRatePerHour: state.manualRatePerHour }) };
 }
 export function advancePlant(config: PairConfig, initial: PlantState, minutes: number): PlantState {
   let state = initial;
@@ -57,7 +57,7 @@ export function advancePlant(config: PairConfig, initial: PlantState, minutes: n
       transferRemainingMm: Math.max(0, state.transferRemainingMm - movedMm),
       prepareRemainingMm: Math.max(0, state.prepareRemainingMm - preparedMm),
       history, trend: [...state.trend, sample].slice(-181),
-      rate: calculateRate(config, { samples: history.samples, startedAt: history.startedAt, now: at, lastGood: state.rate.lastGood }) };
+      rate: calculateRate(config, { samples: history.samples, startedAt: history.startedAt, now: at, lastGood: state.rate.lastGood, manualRatePerHour: state.manualRatePerHour }) };
   }
   return state;
 }
