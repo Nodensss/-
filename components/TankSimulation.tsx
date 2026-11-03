@@ -1,14 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { parseInput, formatNumber } from '../utils';
+import { parseInput, formatNumber, PAIR_321, PAIR_315, transfer, evolveLevels } from '../core';
 import { InputField } from './UIComponents';
 import { Play, Pause, RotateCcw } from 'lucide-react';
 import { SharedTankData } from '../App';
-
-// Constants from the original components
-const TRANSFER_PROPORTION_315_TO_324 = 1.2814;
-const MIN_LEVEL_324 = 350.0; // mm - triggers transfer from 315
-const MIN_LEVEL_323 = 30.0; // % - triggers transfer from 321
-const MM_PER_PERCENT = 382.0 / 38.0; // 10.05 mm/%
 
 interface TankLevels {
     tank321: number;
@@ -88,19 +82,19 @@ const TankSimulation: React.FC<TankSimulationProps> = ({ sharedData }) => {
             const dt = Math.min(timeStep, timeHours - t);
 
             // Consume from tank 324
-            levels.tank324 = Math.max(0, levels.tank324 - rate324 * dt);
+            levels.tank324 = evolveLevels(PAIR_315, levels.tank315, levels.tank324, rate324, dt).feedLevel;
 
             // Consume from tank 323
-            levels.tank323 = Math.max(0, levels.tank323 - rate323 * dt);
+            levels.tank323 = evolveLevels(PAIR_321, levels.tank321, levels.tank323, rate323, dt).feedLevel;
 
             // Check if transfer 315→324 should activate
             // Transfer from 315 down to target level (from shared data)
             const target315 = sharedData.target315;
-            if (levels.tank324 <= MIN_LEVEL_324 && levels.tank315 > target315) {
+            if (levels.tank324 <= PAIR_315.deadLevel && levels.tank315 > target315) {
                 transfers.transfer315to324 = true;
                 // Transfer from 315 down to target level
-                const transferAmount315 = levels.tank315 - target315;
-                levels.tank324 += transferAmount315 * TRANSFER_PROPORTION_315_TO_324;
+                const moved = transfer(PAIR_315, levels.tank315, target315);
+                levels.tank324 += moved.addedFeed;
                 levels.tank315 = target315;
             } else {
                 transfers.transfer315to324 = false;
@@ -109,11 +103,11 @@ const TankSimulation: React.FC<TankSimulationProps> = ({ sharedData }) => {
             // Check if transfer 321→323 should activate
             // Transfer from 321 down to target level (from shared data)
             const target321 = sharedData.target321;
-            if (levels.tank323 <= MIN_LEVEL_323 && levels.tank321 > target321) {
+            if (levels.tank323 <= PAIR_321.deadLevel && levels.tank321 > target321) {
                 transfers.transfer321to323 = true;
                 // Transfer from 321 down to target level
-                const transferAmount321 = levels.tank321 - target321;
-                levels.tank323 += transferAmount321 / MM_PER_PERCENT;
+                const moved = transfer(PAIR_321, levels.tank321, target321);
+                levels.tank323 += moved.addedFeed;
                 levels.tank321 = target321;
             } else {
                 transfers.transfer321to323 = false;
@@ -251,7 +245,7 @@ const TankSimulation: React.FC<TankSimulationProps> = ({ sharedData }) => {
                             <TankVisual
                                 label="321"
                                 level={currentLevels.tank321}
-                                max={634}
+                                max={PAIR_321.sourceScaleMm}
                                 unit="мм"
                                 color="bg-teal-400"
                                 isTransferring={transferState.transfer321to323}
@@ -266,7 +260,7 @@ const TankSimulation: React.FC<TankSimulationProps> = ({ sharedData }) => {
                         <TankVisual
                             label="323"
                             level={currentLevels.tank323}
-                            max={100}
+                            max={PAIR_321.feedScale}
                             unit="%"
                             color="bg-teal-500"
                         />
@@ -277,7 +271,7 @@ const TankSimulation: React.FC<TankSimulationProps> = ({ sharedData }) => {
                             <TankVisual
                                 label="315"
                                 level={currentLevels.tank315}
-                                max={800}
+                                max={PAIR_315.sourceScaleMm}
                                 unit="мм"
                                 color="bg-orange-400"
                                 isTransferring={transferState.transfer315to324}
@@ -292,7 +286,7 @@ const TankSimulation: React.FC<TankSimulationProps> = ({ sharedData }) => {
                         <TankVisual
                             label="324"
                             level={currentLevels.tank324}
-                            max={800}
+                            max={PAIR_315.feedScale}
                             unit="мм"
                             color="bg-orange-500"
                         />

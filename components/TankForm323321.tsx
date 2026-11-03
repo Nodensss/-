@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { parseInput, formatNumber } from '../utils';
+import { parseInput, formatNumber, forecast, PAIR_321 } from '../core';
 import { InputField, ChipGroup, ResultBox } from './UIComponents';
 import { Calculator } from 'lucide-react';
 import { SharedTankData } from '../App';
@@ -25,14 +25,8 @@ const TankForm323321: React.FC<TankForm323321Props> = ({ sharedData, updateShare
   const [useCustomBatch321, setUseCustomBatch321] = useState(false);
   const [customBatch321Str, setCustomBatch321Str] = useState('');
 
-  // Constants
-  const minLevel323 = 30.0; // Dead volume in %
-  const maxLevel321 = 634.0;
-  // Transfer proportion based on real data: 382mm from 321 → 38% increase in 323
-  // Coefficient: 382 / 38 = 10.05 mm/%
-  const proportionIncrease323 = 38.0;
-  const proportionVolume321 = 382.0;
-  const mmPerPercent = proportionVolume321 / proportionIncrease323;
+  const minLevel323 = PAIR_321.deadLevel;
+  const mmPerPercent = 1 / PAIR_321.gainPerMm;
 
   const calculate = () => {
     const l323 = parseInput(sharedData.level323);
@@ -70,18 +64,13 @@ const TankForm323321: React.FC<TankForm323321Props> = ({ sharedData, updateShare
       return;
     }
 
-    // Calc pump amount
-    const pumpMm = Math.min(Math.max(l321 - actualTarget, 0), maxLevel321);
-
-    // Convert mm -> % for time calculation based on rate (%/h)
-    const addedPercentTo323 = pumpMm / mmPerPercent;
-
-    // Calculate total time based on current level + added amount
-    const totalPercentIn323 = l323 + addedPercentTo323;
-
-    // Dead Volume Logic: 30% is unusable
-    const usefulPercent = Math.max(totalPercentIn323 - minLevel323, 0);
-    const hours = usefulPercent / rate;
+    const result = forecast(PAIR_321, { sourceLevelMm: l321, feedLevel: l323, ratePerHour: rate,
+      targetMm: actualTarget, batchMm: 0, now: Date.now() });
+    const pumpMm = result.sourceMm;
+    const addedPercentTo323 = result.addedFeed;
+    const totalPercentIn323 = result.finalLevel;
+    const usefulPercent = result.usefulAfter;
+    const hours = result.hoursAfter;
 
     let batchLine = '';
     let currentBatchMm = batchMm321;
@@ -92,8 +81,8 @@ const TankForm323321: React.FC<TankForm323321Props> = ({ sharedData, updateShare
     }
 
     if (currentBatchMm !== null && currentBatchMm > 0) {
-      const batchPercent = currentBatchMm / mmPerPercent;
-      const batchHours = batchPercent / rate;
+      const batchPercent = forecast(PAIR_321, { sourceLevelMm: l321, feedLevel: l323, ratePerHour: rate, targetMm: actualTarget, batchMm: currentBatchMm, now: Date.now() }).batchHours * rate;
+      const batchHours = forecast(PAIR_321, { sourceLevelMm: l321, feedLevel: l323, ratePerHour: rate, targetMm: actualTarget, batchMm: currentBatchMm, now: Date.now() }).batchHours;
       batchLine = `\nЕсли потом приготовим новый раствор объёмом ${formatNumber(currentBatchMm)} мм, то при расходе ${formatNumber(rate, 1)} %/ч его хватит на ${formatNumber(batchHours, 2)} ч`;
     }
 
@@ -105,8 +94,8 @@ const TankForm323321: React.FC<TankForm323321Props> = ({ sharedData, updateShare
     // Add batch end time if batch is selected
     let batchEndTimeLine = '';
     if (currentBatchMm !== null && currentBatchMm > 0) {
-      const batchPercent = currentBatchMm / mmPerPercent;
-      const batchHours = batchPercent / rate;
+      const batchPercent = forecast(PAIR_321, { sourceLevelMm: l321, feedLevel: l323, ratePerHour: rate, targetMm: actualTarget, batchMm: currentBatchMm, now: Date.now() }).batchHours * rate;
+      const batchHours = forecast(PAIR_321, { sourceLevelMm: l321, feedLevel: l323, ratePerHour: rate, targetMm: actualTarget, batchMm: currentBatchMm, now: Date.now() }).batchHours;
       const batchEndTimeDate = new Date(endTimeDate.getTime() + batchHours * 60 * 60 * 1000);
       const batchEndTimeStr = `${batchEndTimeDate.getHours().toString().padStart(2, '0')}:${batchEndTimeDate.getMinutes().toString().padStart(2, '0')}`;
       batchEndTimeLine = `Новый раствор закончится в: ${batchEndTimeStr}`;
@@ -177,8 +166,7 @@ const TankForm323321: React.FC<TankForm323321Props> = ({ sharedData, updateShare
         <ChipGroup
           label="Перекачиваем 321 до:"
           options={[
-            { label: '160', value: 160 },
-            { label: '0', value: 0 },
+            ...PAIR_321.targetsMm.map(value => ({ label: String(value), value })),
           ]}
           selectedValue={target321}
           isCustom={useCustom321}
@@ -193,9 +181,7 @@ const TankForm323321: React.FC<TankForm323321Props> = ({ sharedData, updateShare
         <ChipGroup
           label="Новый раствор (опционально): эквивалент в мм по 321"
           options={[
-            { label: '382', value: 382 },
-            { label: '600', value: 600 },
-            { label: '900', value: 900 },
+            ...PAIR_321.batchesMm.map(value => ({ label: String(value), value })),
             { label: 'Нет', value: null },
           ]}
           selectedValue={batchMm321}

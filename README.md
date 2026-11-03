@@ -18,3 +18,17 @@ View your app in AI Studio: https://ai.studio/apps/temp/1
 2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
 3. Run the app:
    `npm run dev`
+
+## Расчёт: структура и команды
+
+`core/config.ts` — параметры связок; `core/forecast.ts` — чистый прогноз;
+`core/format.ts` — ввод и форматы. Формы и симуляция используют ядро.
+
+- `npm ci` — установка по lock-файлу.
+- `npm test` — контрольные примеры (Vitest).
+- `npx tsc --noEmit` — проверка типов.
+- `npm run build` — сборка; `npm run dev` — локальный запуск.
+
+Для калькулятора ключ Gemini не требуется. Раздел AI Studio выше сохранён как исходная инструкция.
+Расчёт информационный: не управляет оборудованием, не заменяет регламент,
+сигнализацию, блокировки и ПАЗ. Соединений с реальными системами нет.

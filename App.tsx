@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import TankForm323321 from './components/TankForm323321';
 import TankForm315324 from './components/TankForm315324';
 import TankSimulation from './components/TankSimulation';
+import { PAIR_321, PAIR_315 } from './core';
 import { Droplets } from 'lucide-react';
 
 export interface SharedTankData {
@@ -29,13 +30,13 @@ const App: React.FC = () => {
     level321: '500',
     flowRate323: '2.5',
     result323321: '',
-    target321: 160, // Default target
+    target321: PAIR_321.targetsMm[0], // Default target
 
     level315: '600',
     level324: '200',
     consumptionRate324: '15',
     result315324: '',
-    target315: 260, // Default target
+    target315: PAIR_315.targetsMm[0], // Default target
   });
 
   const updateSharedData = (updates: Partial<SharedTankData>) => {
